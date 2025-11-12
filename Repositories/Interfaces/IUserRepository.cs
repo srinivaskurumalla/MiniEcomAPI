@@ -12,5 +12,8 @@ namespace MiniEcom.Repositories.Interfaces
         Task<User> CreateAsync(User user);
         Task<LoginResultDto> Login(LoginRequestDto user);
 
+        Task<UserProfileDto?> GetUserProfileAsync(int userId);
+        Task UpdateUserProfileAsync(int userId, UserProfileUpdateDto dto);
+
     }
 }

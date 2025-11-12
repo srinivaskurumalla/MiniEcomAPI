@@ -13,7 +13,8 @@ namespace MiniEcom.Repositories.Implementations
     {
         private readonly AppDbContext _db;
         private readonly string _baseUrl;
-        public CartRepository(AppDbContext db, IConfiguration config) {
+        public CartRepository(AppDbContext db, IConfiguration config)
+        {
             _db = db;
             _baseUrl = config["FileSettings:BaseUrl"];
         }
@@ -38,6 +39,7 @@ namespace MiniEcom.Repositories.Implementations
             {
                 item = new CartItem { CartId = cart.Id, ProductId = productId, Quantity = quantity };
                 _db.CartItems.Add(item);
+
             }
             else
             {
@@ -97,5 +99,26 @@ namespace MiniEcom.Repositories.Implementations
             });
             return cartItems;
         }
+
+        public async Task<(int uniqueProducts, int totalQuantity)> GetCartItemCountAsync(int userId)
+        {
+            if (userId == null) return (-1, -1);
+
+            var cart = await _db.Carts.FirstOrDefaultAsync(c => c.UserId == userId);
+            if (cart == null)
+            {
+                return (0, 0);
+            }
+
+            var uniqueProducts = await _db.CartItems
+                .CountAsync(ci => ci.CartId == cart.Id);
+
+            var totalQuantity = await _db.CartItems
+                .Where(ci => ci.CartId == cart.Id)
+                .SumAsync(ci => ci.Quantity);
+
+            return (uniqueProducts, totalQuantity);
+        }
+
     }
 }

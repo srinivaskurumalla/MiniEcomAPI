@@ -35,6 +35,14 @@ public partial class Order
 
     public DateTime? UpdatedAt { get; set; }
 
+    public string? PaymentMethod { get; set; }
+
+    public string? PaymentId { get; set; }
+
+    public DateTime? DeliveredAt { get; set; }
+
+    public DateTime? CancelledAt { get; set; }
+
     public virtual Address? BillingAddress { get; set; }
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();

@@ -18,10 +18,12 @@ namespace MiniEcom.Repositories.Implementations
     {
         private readonly AppDbContext _db;
         private readonly IConfiguration _configuration;
-        public UserRepository(AppDbContext db, IConfiguration configuration)
+        private readonly IWebHostEnvironment _env;
+        public UserRepository(AppDbContext db, IConfiguration configuration, IWebHostEnvironment env)
         {
             _db = db;
             _configuration = configuration;
+            _env = env;
         }
 
         public async Task<User?> GetByIdAsync(int id) => await _db.Users.FindAsync(id);
@@ -98,5 +100,53 @@ namespace MiniEcom.Repositories.Implementations
 
         }
 
+        public Task<UserProfileDto?> GetUserProfileAsync(int userId)
+        {
+            return _db.Users.Where(u => u.Id == userId)
+                .Select(u => new UserProfileDto
+                {
+                    Id = u.Id,
+                    Username = u.Username,
+                    Email = u.Email,
+                    DisplayName = u.DisplayName,
+                    Phone = u.Phone,
+                    ProfileImageUrl = u.ProfileImageUrl,
+                    IsEmailConfirmed = u.IsEmailConfirmed,
+                    CreatedAt = u.CreatedAt,
+                    LastLoginAt = u.LastLoginAt
+                })
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task  UpdateUserProfileAsync(int userId, UserProfileUpdateDto dto)
+        {
+
+            var user = await _db.Users.FindAsync(userId);
+            if (user == null) throw new Exception("User not found");
+
+            user.DisplayName = dto.DisplayName ?? user.DisplayName;
+            user.Phone = dto.Phone ?? user.Phone;
+            user.Email = dto.Email ?? user.Email;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            //  Handle profile image upload
+            if (dto.ProfileImage != null)
+            {
+                var uploadDir = Path.Combine(_env.WebRootPath, "uploads", "profiles");
+                if (!Directory.Exists(uploadDir))
+                    Directory.CreateDirectory(uploadDir);
+
+                var fileName = $"{Guid.NewGuid()}{Path.GetExtension(dto.ProfileImage.FileName)}";
+                var filePath = Path.Combine(uploadDir, fileName);
+
+                using var stream = new FileStream(filePath, FileMode.Create);
+                await dto.ProfileImage.CopyToAsync(stream);
+
+                user.ProfileImageUrl = $"uploads/profiles/{fileName}";
+            }
+
+            _db.Users.Update(user);
+            await _db.SaveChangesAsync();
+        }
     }
 }

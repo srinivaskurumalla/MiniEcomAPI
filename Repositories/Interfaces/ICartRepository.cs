@@ -9,5 +9,6 @@ namespace MiniEcom.Repositories.Interfaces
         Task AddToCartAsync(int userId, int productId, int quantity);
         Task RemoveFromCartAsync(int userId, int productId);
         Task<IEnumerable<CartItemDto>> GetCartItemsByUserIdAsync(int userId);
+        Task<(int uniqueProducts, int totalQuantity)> GetCartItemCountAsync(int userId);
     }
 }

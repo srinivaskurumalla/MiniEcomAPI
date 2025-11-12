@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MiniEcom.Api.Dtos;
 using MiniEcom.Api.Utilities;
 using MiniEcom.Dtos;
 using MiniEcom.Models;
 using MiniEcom.Repositories.Interfaces;
+using MiniEcom.Utilities;
 
 namespace MiniEcom.Api.Controllers
 {
@@ -54,6 +56,33 @@ namespace MiniEcom.Api.Controllers
             {
                 return NotFound(result);
             }
+        }
+
+        [Authorize]
+        [HttpGet("profile")]
+        public async Task<IActionResult> GetProfile()
+        {
+            var userId = UserHelper.GetUserId(User);
+            if (userId == -1)
+                return Unauthorized("Invalid user token");
+
+            var user = await _repo.GetUserProfileAsync(userId);
+            if (user == null)
+                return NotFound("User not found");
+
+            return Ok(user);
+        }
+
+        [Authorize]
+        [HttpPut("profile")]
+        public async Task<IActionResult> UpdateProfile([FromForm] UserProfileUpdateDto dto)
+        {
+            var userId = UserHelper.GetUserId(User);
+            if (userId == -1)
+                return Unauthorized("Invalid user token");
+
+            await _repo.UpdateUserProfileAsync(userId, dto);
+            return Ok(new { message = "Profile updated successfully" });
         }
     }
 }

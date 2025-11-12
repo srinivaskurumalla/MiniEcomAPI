@@ -16,6 +16,7 @@ public partial class AppDbContext : DbContext
     {
     }
 
+
     public virtual DbSet<Address> Addresses { get; set; }
 
     public virtual DbSet<Cart> Carts { get; set; }
@@ -130,6 +131,8 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.OrderStatus)
                 .HasMaxLength(50)
                 .HasDefaultValue("Pending");
+            entity.Property(e => e.PaymentId).HasMaxLength(100);
+            entity.Property(e => e.PaymentMethod).HasMaxLength(50);
             entity.Property(e => e.ShippingCharge).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.SubTotal).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.TaxAmount).HasColumnType("decimal(18, 2)");
@@ -184,6 +187,7 @@ public partial class AppDbContext : DbContext
 
             entity.Property(e => e.Amount).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.PaymentMethod).HasMaxLength(50);
             entity.Property(e => e.PaymentProvider).HasMaxLength(100);
             entity.Property(e => e.PaymentReference).HasMaxLength(200);
             entity.Property(e => e.PaymentStatus)
@@ -277,9 +281,11 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
             entity.Property(e => e.DisplayName).HasMaxLength(200);
             entity.Property(e => e.Email).HasMaxLength(256);
+            entity.Property(e => e.LastLoginAt).HasColumnType("datetime");
             entity.Property(e => e.PasswordHash).HasMaxLength(512);
             entity.Property(e => e.PasswordSalt).HasMaxLength(128);
             entity.Property(e => e.Phone).HasMaxLength(20);
+            entity.Property(e => e.ProfileImageUrl).HasMaxLength(255);
             entity.Property(e => e.Username).HasMaxLength(100);
         });
 

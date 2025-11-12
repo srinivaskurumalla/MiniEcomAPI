@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MiniEcom.Api.Dtos;
 using MiniEcom.Controllers;
+using MiniEcom.Models;
 using MiniEcom.Repositories.Interfaces;
 using MiniEcom.Utilities;
 using System.Security.Claims;
@@ -24,7 +25,15 @@ namespace MiniEcom.Api.Controllers
 
             if (!ModelState.IsValid) return BadRequest(ModelState);
             await _repo.AddToCartAsync(CurrentUserId.Value, dto.ProductId, dto.Quantity);
-            return Ok(new { message = "Added to cart" });
+
+            var (uniqueProducts, totalQuantity) = await _repo.GetCartItemCountAsync(CurrentUserId.Value);
+
+            return Ok(new
+            {
+                message = "Item added to cart successfully",
+                uniqueProducts,
+                totalQuantity
+            });
         }
 
         [HttpDelete("{productId}")]
@@ -34,7 +43,15 @@ namespace MiniEcom.Api.Controllers
                 return Unauthorized("Please login to add to cart");
 
             await _repo.RemoveFromCartAsync(CurrentUserId.Value, productId);
-            return Ok(new { message = "Removed from cart" });
+
+            var (uniqueProducts, totalQuantity) = await _repo.GetCartItemCountAsync(CurrentUserId.Value);
+
+            return Ok(new
+            {
+                message = "Removed from cart",
+                uniqueProducts,
+                totalQuantity
+            });
         }
 
         [HttpGet]
