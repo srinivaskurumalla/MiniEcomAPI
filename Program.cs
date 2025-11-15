@@ -42,6 +42,9 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuer = false,
         ValidateAudience = false,
         ValidateIssuerSigningKey = true,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero, // ? optional: make it strict (no 5 min grace)
+
         IssuerSigningKey = new SymmetricSecurityKey(keyBytes)
     };
 });

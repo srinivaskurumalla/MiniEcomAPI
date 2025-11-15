@@ -4,6 +4,7 @@ using MiniEcom.Data;
 using MiniEcom.Api.Dtos;
 using MiniEcom.Repositories.Interfaces;
 using System.Text.Json;
+using MiniEcom.Dtos;
 
 namespace MiniEcom.Repositories.Implementations
 {
@@ -12,39 +13,29 @@ namespace MiniEcom.Repositories.Implementations
         private readonly AppDbContext _db;
         public OrderRepository(AppDbContext db) { _db = db; }
 
-        public async Task<string> CreateOrderAsync(CreateOrderDto dto)
+        public async Task<(int OrderId, string OrderNumber, decimal TotalAmount)> CreateOrderAsync(int userId, CheckoutDto dto)
         {
-            // Build JSON for stored procedure
-            var items = dto.Items.Select(i => new { i.ProductId, i.Quantity, i.UnitPrice }).ToArray();
-            var itemsJson = JsonSerializer.Serialize(items);
+            var parameters = new[]
+           {
+                new SqlParameter("@UserId", userId),
+                new SqlParameter("@ShippingAddressId", dto.ShippingAddressId),
+                new SqlParameter("@BillingAddressId", dto.BillingAddressId ?? (object)DBNull.Value),
+                new SqlParameter("@PaymentMethod", dto.PaymentMethod),
+                new SqlParameter("@Notes", dto.Notes ?? (object)DBNull.Value)
+            };
 
-            var conn = _db.Database.GetDbConnection();
-            await using (conn)
-            {
-                if (conn.State != System.Data.ConnectionState.Open)
-                    await conn.OpenAsync();
+            // Call stored procedure
+            var result = await _db.Database
+                .SqlQueryRaw<OrderResultDto>(
+                    "EXEC usp_CreateOrderAndDeductStock @UserId, @ShippingAddressId, @BillingAddressId, @PaymentMethod, @Notes",
+                    parameters)
+                .ToListAsync();
 
-                await using var cmd = conn.CreateCommand();
-                cmd.CommandText = "dbo.usp_CreateOrderAndDeductStock";
-                cmd.CommandType = System.Data.CommandType.StoredProcedure;
+            var order = result.FirstOrDefault();
+            if (order == null)
+                throw new Exception("Order creation failed.");
 
-                var pUser = new SqlParameter("@UserId", dto.UserId);
-                var pShip = new SqlParameter("@ShippingAddressId", dto.ShippingAddressId);
-                var pBill = new SqlParameter("@BillingAddressId", dto.BillingAddressId ?? (object)DBNull.Value);
-                var pItems = new SqlParameter("@ItemsJson", System.Data.SqlDbType.NVarChar) { Value = itemsJson };
-                var pOut = new SqlParameter("@OrderNumberOut", System.Data.SqlDbType.NVarChar, 50) { Direction = System.Data.ParameterDirection.Output };
-
-                cmd.Parameters.Add(pUser);
-                cmd.Parameters.Add(pShip);
-                cmd.Parameters.Add(pBill);
-                cmd.Parameters.Add(pItems);
-                cmd.Parameters.Add(pOut);
-
-                await cmd.ExecuteNonQueryAsync();
-
-                var orderNumber = pOut.Value?.ToString() ?? string.Empty;
-                return orderNumber;
-            }
+            return (order.OrderId, order.OrderNumber, order.TotalAmount);
         }
     }
 }
