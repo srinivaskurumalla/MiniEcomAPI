@@ -35,6 +35,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<ProductImage> ProductImages { get; set; }
 
+    public virtual DbSet<ProductTag> ProductTags { get; set; }
+
     public virtual DbSet<Role> Roles { get; set; }
 
     public virtual DbSet<StockTransaction> StockTransactions { get; set; }
@@ -240,6 +242,17 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.Product).WithMany(p => p.ProductImages)
                 .HasForeignKey(d => d.ProductId)
                 .HasConstraintName("FK_ProductImages_Product");
+        });
+
+        modelBuilder.Entity<ProductTag>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__ProductT__3214EC07A3A8081B");
+
+            entity.Property(e => e.Tag).HasMaxLength(50);
+
+            entity.HasOne(d => d.Product).WithMany(p => p.ProductTags)
+                .HasForeignKey(d => d.ProductId)
+                .HasConstraintName("FK_ProductTags_Product");
         });
 
         modelBuilder.Entity<Role>(entity =>

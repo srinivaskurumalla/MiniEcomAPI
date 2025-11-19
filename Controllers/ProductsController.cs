@@ -91,7 +91,16 @@ namespace MiniEcom.Api.Controllers
                 CreatedAt = DateTime.UtcNow
             };
 
+           
+
             await _repo.AddProduct(product);
+
+            //Handle Product Tags
+            if (dto.Tags != null && dto.Tags.Any())
+            {
+                await _repo.AddProductTags(product.Id, dto.Tags);
+               
+            }
 
             //  Handle Image Uploads
             if (dto.Images != null && dto.Images.Count > 0)

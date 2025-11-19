@@ -28,5 +28,8 @@ namespace MiniEcom.Dtos
 
         // For file uploads
         public List<IFormFile>? Images { get; set; }
+
+        // NEW → Admin provides tags like: “makeup, eye, beauty”
+        public List<string>? Tags { get; set; }
     }
 }

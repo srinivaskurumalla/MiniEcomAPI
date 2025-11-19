@@ -12,6 +12,7 @@ namespace MiniEcom.Repositories.Implementations
 
         public async Task<Product> AddProduct(Product product)
         {
+
             _db.Products.Add(product);
             await _db.SaveChangesAsync();
             return product;
@@ -20,8 +21,21 @@ namespace MiniEcom.Repositories.Implementations
 
         public async Task AddProductImageAsync(ProductImage image)
         {
-          await _db.ProductImages.AddAsync(image);
+            await _db.ProductImages.AddAsync(image);
             await _db.SaveChangesAsync();
+        }
+
+        public async Task AddProductTags(int productId, List<string> tags)
+        {
+            var tagEntities = tags.Select(t => new ProductTag
+            {
+                ProductId = productId,
+                Tag = t.Trim().ToLower()
+            }).ToList();
+
+            _db.ProductTags.AddRange(tagEntities);
+            await _db.SaveChangesAsync();
+
         }
 
         public async Task<bool> DeleteProduct(int id)
@@ -40,10 +54,10 @@ namespace MiniEcom.Repositories.Implementations
 
         public async Task<Product?> GetByIdAsync(int id)
         {
-           return await  _db.Products
-             .Include(p => p.ProductImages) 
-             .Where(p => p.IsActive && p.Id == id)
-             .FirstOrDefaultAsync();
+            return await _db.Products
+              .Include(p => p.ProductImages)
+              .Where(p => p.IsActive && p.Id == id)
+              .FirstOrDefaultAsync();
         }
 
         public async Task<IEnumerable<Category>> GetCategoriesAsync()
@@ -65,7 +79,12 @@ namespace MiniEcom.Repositories.Implementations
             if (!string.IsNullOrWhiteSpace(q))
             {
                 q = q.Trim();
-                query = query.Where(p => p.Name.Contains(q) || p.Sku.Contains(q));
+                query = query.Where(p =>
+                    p.Name.Contains(q) ||
+                    p.Sku.Contains(q) ||
+                    p.ProductTags.Any(t => t.Tag.Contains(q))
+                );
+
             }
 
             return await query

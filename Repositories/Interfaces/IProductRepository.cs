@@ -7,6 +7,7 @@ namespace MiniEcom.Repositories.Interfaces
         Task<Product?> GetByIdAsync(int id);
         Task<IEnumerable<Product>> SearchAsync(string? q, int page = 1, int pageSize = 20);
         Task<Product> AddProduct(Product product);
+        Task AddProductTags(int productId, List<string> tags);
         Task<Product> UpdateProduct(Product product);
         Task<bool> DeleteProduct(int id);
 
