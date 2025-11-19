@@ -44,5 +44,17 @@ namespace MiniEcom.Api.Controllers
                 });
             }
         }
+
+
+        [HttpGet("my-orders")]
+        public async Task<IActionResult> GetMyOrders()
+        {
+            var userId = UserHelper.GetUserId(User);
+            if (userId == -1)
+                return Unauthorized("Please login again.");
+
+            var orders = await _repo.GetOrdersByUserIdAsync(userId);
+            return Ok(orders);
+        }
     }
 }

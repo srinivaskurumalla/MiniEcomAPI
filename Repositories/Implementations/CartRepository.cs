@@ -43,7 +43,7 @@ namespace MiniEcom.Repositories.Implementations
             }
             else
             {
-                item.Quantity += quantity;
+                item.Quantity = quantity;
                 _db.CartItems.Update(item);
             }
             cart.LastUpdated = DateTime.UtcNow;

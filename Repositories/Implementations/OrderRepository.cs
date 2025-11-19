@@ -11,7 +11,12 @@ namespace MiniEcom.Repositories.Implementations
     public class OrderRepository : IOrderRepository
     {
         private readonly AppDbContext _db;
-        public OrderRepository(AppDbContext db) { _db = db; }
+        private readonly IConfiguration _config;
+        public OrderRepository(AppDbContext db,  IConfiguration config)
+        {
+            _db = db;         
+            _config = config;
+        }
 
         public async Task<(int OrderId, string OrderNumber, decimal TotalAmount)> CreateOrderAsync(int userId, CheckoutDto dto)
         {
@@ -36,6 +41,35 @@ namespace MiniEcom.Repositories.Implementations
                 throw new Exception("Order creation failed.");
 
             return (order.OrderId, order.OrderNumber, order.TotalAmount);
+        }
+
+        public async Task<IEnumerable<OrderSummaryDto>> GetOrdersByUserIdAsync(int userId)
+        {
+            var baseUrl = _config["FileSettings:BaseUrl"];
+            return await _db.Orders
+                .Where(o => o.UserId == userId)
+                .OrderByDescending(o => o.OrderPlacedAt)
+                .Select(o => new OrderSummaryDto
+                {
+                    OrderId = o.Id,
+                    OrderNumber = o.OrderNumber,
+                    TotalAmount = o.TotalAmount,
+                    OrderPlacedAt = o.OrderPlacedAt,
+                    OrderStatus = o.OrderStatus,
+                    IsPaid = o.IsPaid,
+                    Items = o.OrderItems.Select(i => new OrderSummaryItemDto
+                    {
+                        ProductId = i.ProductId,
+                        ProductName = i.Product.Name,
+                        Price = i.UnitPrice,
+                        Quantity = i.Quantity,
+                        ImageUrl = i.Product.ProductImages
+                        .Where(pi => pi.IsPrimary)
+                        .Select(pi => baseUrl + "/"+ pi.FilePath)
+                        .FirstOrDefault() ?? "assets/no-image.png"
+                    }).ToList()
+                })
+                .ToListAsync();
         }
     }
 }

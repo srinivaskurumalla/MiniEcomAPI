@@ -62,8 +62,8 @@ namespace MiniEcom.Api.Controllers
 
             var cartItems = await _repo.GetCartItemsByUserIdAsync(CurrentUserId.Value);
 
-            if (!cartItems.Any())
-                return NotFound("No cart items found for this user.");
+            //if (!cartItems.Any())
+            //    return NotFound("No cart items found for this user.");
             return Ok(cartItems);
 
         }
