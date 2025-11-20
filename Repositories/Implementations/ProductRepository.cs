@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MiniEcom.Data;
+using MiniEcom.Dtos;
 using MiniEcom.Models;
 using MiniEcom.Repositories.Interfaces;
 
@@ -52,6 +54,19 @@ namespace MiniEcom.Repositories.Implementations
             return false;
         }
 
+        public async Task<IEnumerable<Product>> GetAllProducts(int page = 1, int pageSize = 5)
+        {
+            var query = _db.Products
+                  .Include(p => p.ProductImages.Where(i => i.IsPrimary == true)) //Include primary image
+                  .Where(p => p.IsActive);
+
+
+            return await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+        }
+
         public async Task<Product?> GetByIdAsync(int id)
         {
             return await _db.Products
@@ -69,30 +84,42 @@ namespace MiniEcom.Repositories.Implementations
             return categories;
         }
 
-        public async Task<IEnumerable<Product>> SearchAsync(string? q, int page = 1, int pageSize = 20)
+        public async Task<SearchResultDto> SearchAsync(string? q)
         {
-            var query = _db.Products
+            var result = new SearchResultDto();
 
-                .Include(p => p.ProductImages.Where(i => i.IsPrimary == true)) // <-- always include primary images
-                .Where(p => p.IsActive);
+            if (string.IsNullOrWhiteSpace(q))
+                return result;
 
-            if (!string.IsNullOrWhiteSpace(q))
-            {
-                q = q.Trim();
-                query = query.Where(p =>
-                    p.Name.Contains(q) ||
-                    p.Sku.Contains(q) ||
-                    p.ProductTags.Any(t => t.Tag.Contains(q))
-                );
+            var searchText = q.Trim().ToLower();
 
-            }
-
-            return await query
-                .OrderBy(p => p.Name)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
+            // Product matches
+            result.Products = await _db.Products
+                .Include(p => p.ProductImages.Where(i => i.IsPrimary))
+                .Where(p => p.IsActive &&
+                       (p.Name.Contains(searchText) || p.Sku.Contains(searchText)))
+                .Select(p => new ProductSummaryDto
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    ShortDescription = p.ShortDescription,
+                    ImageUrl = p.ProductImages.FirstOrDefault().FilePath
+                })
+                .Take(5)
                 .ToListAsync();
+
+            // Tag matches
+            result.Tags = await _db.ProductTags
+                .Where(t => t.Tag.Contains(searchText))
+                .Select(t => t.Tag)
+                .Distinct()
+                .Take(5)
+                .ToListAsync();
+
+            return result;
         }
+
+
 
 
         public async Task<Product> UpdateProduct(Product product)

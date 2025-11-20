@@ -18,11 +18,27 @@ namespace MiniEcom.Api.Controllers
             _imagesRepo = imagesRepo;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> Search([FromQuery] string? q, [FromQuery] int page = 1)
+        [HttpGet("search")]
+        public async Task<IActionResult> Search(string? q)
         {
             var baseUrl = $"{Request.Scheme}://{Request.Host}";
-            var products = await _repo.SearchAsync(q, page);
+            var result = await _repo.SearchAsync(q);
+
+            result.Products.ForEach(p =>
+            {
+                if (!string.IsNullOrEmpty(p.ImageUrl))
+                {
+                    p.ImageUrl = $"{baseUrl}/{p.ImageUrl}";
+                }
+            });
+            return Ok(result);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Get([FromQuery] int page, [FromQuery] int pageSize )
+        {
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+            var products = await _repo.GetAllProducts(page, pageSize);
             var dto = products.Select(p => new ProductDto
             {
                 Id = p.Id,
@@ -30,7 +46,7 @@ namespace MiniEcom.Api.Controllers
                 Name = p.Name,
                 Price = p.Price,
                 StockQuantity = p.StockQuantity,
-                shortDescription = p?.ShortDescription,
+                shortDescription = p.ShortDescription,
                 Images = p.ProductImages.Select(i => new ProductImageDto
                 {
                     Id = i.Id,
