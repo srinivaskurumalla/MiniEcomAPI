@@ -12,9 +12,9 @@ namespace MiniEcom.Repositories.Implementations
     {
         private readonly AppDbContext _db;
         private readonly IConfiguration _config;
-        public OrderRepository(AppDbContext db,  IConfiguration config)
+        public OrderRepository(AppDbContext db, IConfiguration config)
         {
-            _db = db;         
+            _db = db;
             _config = config;
         }
 
@@ -65,11 +65,76 @@ namespace MiniEcom.Repositories.Implementations
                         Quantity = i.Quantity,
                         ImageUrl = i.Product.ProductImages
                         .Where(pi => pi.IsPrimary)
-                        .Select(pi => baseUrl + "/"+ pi.FilePath)
+                        .Select(pi => baseUrl + "/" + pi.FilePath)
                         .FirstOrDefault() ?? "assets/no-image.png"
                     }).ToList()
                 })
                 .ToListAsync();
         }
+
+
+        public async Task<OrderDetailsDto?> GetOrderDetailsAsync(int orderId, int userId)
+        {
+            var order = await _db.Orders
+                .Include(o => o.ShippingAddress)
+                .Include(o => o.BillingAddress)
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
+                .ThenInclude(p => p.ProductImages)
+                .FirstOrDefaultAsync(o => o.Id == orderId && o.UserId == userId);
+
+            if (order == null) return null;
+
+            var baseUrl = _config["FileSettings:BaseUrl"];
+
+            return new OrderDetailsDto
+            {
+                OrderId = order.Id,
+                OrderNumber = order.OrderNumber,
+                OrderPlacedAt = order.OrderPlacedAt,
+                SubTotal = order.SubTotal,
+                TaxAmount = order.TaxAmount,
+                ShippingCharge = order.ShippingCharge,
+                TotalAmount = order.TotalAmount,
+                OrderStatus = order.OrderStatus,
+                IsPaid = order.IsPaid,
+                PaymentMethod = order.PaymentMethod,
+
+                ShippingAddress = new AddressDto
+                {
+                    RecipientName = order.ShippingAddress.RecipientName,
+                    Line1 = order.ShippingAddress.Line1,
+                    Line2 = order.ShippingAddress.Line2,
+                    City = order.ShippingAddress.City,
+                    State = order.ShippingAddress.State,
+                    PostalCode = order.ShippingAddress.PostalCode,
+                    Phone = order.ShippingAddress.Phone
+                },
+
+                BillingAddress = order.BillingAddress == null ? null : new AddressDto
+                {
+                    RecipientName = order.BillingAddress.RecipientName,
+                    Line1 = order.BillingAddress.Line1,
+                    Line2 = order.BillingAddress.Line2,
+                    City = order.BillingAddress.City,
+                    State = order.BillingAddress.State,
+                    PostalCode = order.BillingAddress.PostalCode,
+                    Phone = order.BillingAddress.Phone
+                },
+
+                Items = order.OrderItems.Select(oi => new OrderItemDetailsDto
+                {
+                    ProductId = oi.ProductId,
+                    ProductName = oi.Product.Name,
+                    SKU = oi.Sku,
+                    ImageUrl = oi.Product.ProductImages.FirstOrDefault(i => i.IsPrimary)?.FilePath != null
+                        ? $"{baseUrl}/{oi.Product.ProductImages.First(i => i.IsPrimary).FilePath}"
+                        : string.Empty,
+                    UnitPrice = oi.UnitPrice,
+                    Quantity = oi.Quantity
+                }).ToList()
+            };
+        }
+
     }
 }

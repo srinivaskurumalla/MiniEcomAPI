@@ -9,6 +9,7 @@ namespace MiniEcom.Repositories.Interfaces
         //Task<string> CreateOrderAsync(CreateOrderDto dto);
         Task<(int OrderId, string OrderNumber, decimal TotalAmount)> CreateOrderAsync(int userId, CheckoutDto dto);
         Task<IEnumerable<OrderSummaryDto>> GetOrdersByUserIdAsync(int userId);
+        Task<OrderDetailsDto?> GetOrderDetailsAsync(int orderId, int userId);
 
     }
 }

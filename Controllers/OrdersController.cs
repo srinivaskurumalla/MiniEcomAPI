@@ -56,5 +56,19 @@ namespace MiniEcom.Api.Controllers
             var orders = await _repo.GetOrdersByUserIdAsync(userId);
             return Ok(orders);
         }
+
+        [HttpGet("{orderId}")]
+        public async Task<IActionResult> GetOrderDetails(int orderId)
+        {
+            var CurrentUserId = UserHelper.GetUserId(User);
+            if (CurrentUserId == -1)
+                return Unauthorized("Login required");
+
+            var result = await _repo.GetOrderDetailsAsync(orderId, CurrentUserId);
+            if (result == null) return NotFound("Order not found");
+
+            return Ok(result);
+        }
+
     }
 }

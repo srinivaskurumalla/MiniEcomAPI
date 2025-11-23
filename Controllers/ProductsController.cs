@@ -47,6 +47,8 @@ namespace MiniEcom.Api.Controllers
                 Price = p.Price,
                 StockQuantity = p.StockQuantity,
                 shortDescription = p.ShortDescription,
+                isActive = p.IsActive,
+                tags = string.Join(", ",p.ProductTags.Select(t => t.Tag)),
                 Images = p.ProductImages.Select(i => new ProductImageDto
                 {
                     Id = i.Id,
@@ -57,6 +59,33 @@ namespace MiniEcom.Api.Controllers
             });
             return Ok(dto);
         }
+
+        [HttpGet("tag/{tag}")]
+        public async Task<IActionResult> GetProductsByTag(string tag)
+        {
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+            var products = await _repo.GetProductsByTagAsync(tag);
+
+            var dto = products.Select(p => new ProductDto
+            {
+                Id = p.Id,
+                SKU = p.Sku,
+                Name = p.Name,
+                Price = p.Price,
+                StockQuantity = p.StockQuantity,
+                shortDescription = p.ShortDescription,
+                Images = p.ProductImages.Select(i => new ProductImageDto
+                {
+                    Id = i.Id,
+                    FileName = i.FileName,
+                    ImageUrl = $"{baseUrl}/{i.FilePath}"
+                }).ToList(),
+                tags = string.Join(", ", p.ProductTags.Select(t => t.Tag)),
+            });
+
+            return Ok(dto);
+        }
+
 
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(int id)
@@ -126,28 +155,40 @@ namespace MiniEcom.Api.Controllers
             return Ok(new { message = "Product added successfully", id = product.Id });
 
         }
-        [HttpPut("id")]
-        public async Task<IActionResult> Update(int id, [FromBody] ProductDto dto)
+        
+        [HttpPut]
+        public async Task<IActionResult> Update(int id, [FromForm] ProductUpdateDto dto)
         {
-            var product = await _repo.GetByIdAsync(id);
-            if (product is null) return NotFound("Product not found");
-            product.Name = dto.Name;
-            product.Price = dto.Price;
-            product.StockQuantity = dto.StockQuantity;
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
+            var updatedProduct = await _repo.UpdateProduct(id, dto);
+            if (updatedProduct == null)
+                return NotFound("Product not found");
 
-            await _repo.UpdateProduct(product);
-            return Ok(new { message = "Product updated successfully" });
+            //  Handle image uploads (if any new ones provided)
+            //if (dto.Images != null && dto.Images.Count > 0)
+            //{
+            //    // Optional: remove old images first if you want a full replace
+            //    var oldImages = _db.ProductImages.Where(i => i.ProductId == dto.Id);
+            //    _db.ProductImages.RemoveRange(oldImages);
+            //    await _db.SaveChangesAsync();
+
+            //    await _imagesRepo.UploadProductImagesAsync(dto.Id, dto.Images);
+            //}
+
+            // await _repo.UpdateProduct(product);
+            return Ok(new { message = "Product updated successfully", id = updatedProduct.Id });
         }
 
         [HttpDelete("id")]
         public async Task<IActionResult> Delete(int id)
         {
-            var product = _repo.GetByIdAsync(id);
-            if (product == null)
+            var product = await _repo.DeleteProduct(id);
+            if (product == false)
                 return NotFound(new { message = $"Product with id {id} not found" });
 
-            await _repo.DeleteProduct(id);
+            
             return Ok(new { message = "Product deleted successfully" });
         }
 

@@ -9,7 +9,9 @@ namespace MiniEcom.Api.Dtos
         public string Name { get; set; }
         public decimal Price { get; set; }
         public int StockQuantity { get; set; }
-        public string shortDescription { get; set; }
+        public string? shortDescription { get; set; }
+        public string tags { get; set; }
+        public bool isActive { get; set; }
         public ICollection<ProductImageDto> Images { get; set; } = [];
     }
 }

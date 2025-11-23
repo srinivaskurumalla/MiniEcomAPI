@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MiniEcom.Data;
 using MiniEcom.Dtos;
@@ -42,23 +42,29 @@ namespace MiniEcom.Repositories.Implementations
 
         public async Task<bool> DeleteProduct(int id)
         {
-            var product = _db.Products.FirstOrDefault(x => x.Id == id);
-            if (product != null)
+            var product = await _db.Products.FirstOrDefaultAsync(x => x.Id == id);
+
+            if (product == null)
             {
-                {
-                    _db.Products.Remove(product);
-                    await _db.SaveChangesAsync();
-                    return true;
-                }
+                return false;
             }
-            return false;
+
+            //Instead of delete, make it inactive
+            product.IsActive = false;
+            product.UpdatedAt = DateTime.UtcNow;
+
+          //  _db.Products.Remove(product);
+            await _db.SaveChangesAsync();
+            return true;
+
         }
 
         public async Task<IEnumerable<Product>> GetAllProducts(int page = 1, int pageSize = 5)
         {
             var query = _db.Products
                   .Include(p => p.ProductImages.Where(i => i.IsPrimary == true)) //Include primary image
-                  .Where(p => p.IsActive);
+                  .Include(p => p.ProductTags);
+                 // .Where(p => p.IsActive);
 
 
             return await query
@@ -82,6 +88,23 @@ namespace MiniEcom.Repositories.Implementations
                 .ToListAsync();
 
             return categories;
+        }
+
+        public async Task<IEnumerable<Product>> GetProductsByTagAsync(string tag)
+        {
+            if (string.IsNullOrWhiteSpace(tag))
+                return Enumerable.Empty<Product>();
+
+            tag = tag.Trim().ToLower();
+
+            var products = await _db.Products
+                  .Include(p => p.ProductImages.Where(i => i.IsPrimary == true))
+                  .Include(p => p.ProductTags)
+                  .Where(p => p.ProductTags.Any(t => t.Tag.ToLower().Contains(tag)))
+                  .ToListAsync();
+
+            return products;
+                
         }
 
         public async Task<SearchResultDto> SearchAsync(string? q)
@@ -122,10 +145,54 @@ namespace MiniEcom.Repositories.Implementations
 
 
 
-        public async Task<Product> UpdateProduct(Product product)
+        public async Task<Product?> UpdateProduct(int id, ProductUpdateDto dto)
         {
-            _db.Products.Update(product);
+            var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id);
+            if (product == null)
+                return null;
+
+            // Update main product fields
+            product.Name = dto.Name;
+            product.ShortDescription = dto.ShortDescription;
+            product.LongDescription = dto.LongDescription;
+            product.Price = dto.Price;
+            product.Mrp = dto.Mrp;
+            product.TaxPercent = dto.TaxPercent;
+            product.StockQuantity = dto.StockQuantity;
+            product.IsActive = dto.IsActive;
+            product.CategoryId = dto.CategoryId;
+            product.UpdatedAt = DateTime.UtcNow;
+
             await _db.SaveChangesAsync();
+
+
+
+            //  Replace tags if new ones are provided
+            if (dto.Tags != null && dto.Tags.Any())
+            {
+                var existingTags = _db.ProductTags.Where(t => t.ProductId == product.Id);
+                _db.ProductTags.RemoveRange(existingTags);
+
+                var tagEntities = dto.Tags.Select(t => new ProductTag
+                {
+                    ProductId = product.Id,
+                    Tag = t.Trim().ToLower()
+                }).ToList();
+
+                await _db.ProductTags.AddRangeAsync(tagEntities);
+                await _db.SaveChangesAsync();
+            }
+
+            //// ✅ Handle image uploads (if any new ones provided)
+            //if (dto.Images != null && dto.Images.Count > 0)
+            //{
+            //    // Optional: remove old images first if you want a full replace
+            //    var oldImages = _db.ProductImages.Where(i => i.ProductId == dto.Id);
+            //    _db.ProductImages.RemoveRange(oldImages);
+            //    await _db.SaveChangesAsync();
+
+            //    await _imagesRepo.UploadProductImagesAsync(dto.Id, dto.Images);
+            //}
             return product;
         }
     }
